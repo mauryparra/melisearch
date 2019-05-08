@@ -9,7 +9,7 @@ import (
 	"github.com/mauryparra/melisearch/src/melisearch/utils/apierrors"
 )
 
-const urlSites = "https://api.mercadolibre.com/sites/"
+const urlSites = "http://localhost:8081/sites/"
 
 // Get obtiene toda la iformación del usuario a partir del ID
 func (site *Site) Get() *apierrors.ApiError {

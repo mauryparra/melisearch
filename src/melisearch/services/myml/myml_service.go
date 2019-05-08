@@ -1,17 +1,11 @@
 package myml
 
 import (
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"net/http"
 	"sync"
 
 	"github.com/mauryparra/melisearch/src/melisearch/domain/myml"
 	"github.com/mauryparra/melisearch/src/melisearch/utils/apierrors"
 )
-
-// const urlCategories = "https://api.mercadolibre.com/sites/%s/categories"
 
 // GetInfoFromAPI obtiene la información del usuario, sitio y moneda desde un userID
 func GetInfoFromAPI(userID int64) (*myml.MyML, *apierrors.ApiError) {
@@ -31,13 +25,14 @@ func GetInfoFromAPI(userID int64) (*myml.MyML, *apierrors.ApiError) {
 	go func() {
 		for i := 0; i < 2; i++ {
 			apiMyML := <-c
+
 			wg.Done()
-			if &apiMyML.Site != nil {
+			if apiMyML.Site.ID != "" {
 				myMLData.Site = apiMyML.Site
 				continue
 			}
 
-			if &apiMyML.PaymentMethods != nil {
+			if apiMyML.PaymentMethods[0].ID != "" {
 				myMLData.PaymentMethods = apiMyML.PaymentMethods
 				continue
 			}
@@ -47,7 +42,7 @@ func GetInfoFromAPI(userID int64) (*myml.MyML, *apierrors.ApiError) {
 	wg.Add(2)
 
 	go getSiteFromAPI(myMLData.User.SiteID, c)
-	// go getPaymentMethodsFromAPI(myMLData.User.SiteID, c)
+	go getPaymentMethodsFromAPI(myMLData.User.SiteID, c)
 
 	wg.Wait()
 
@@ -71,36 +66,19 @@ func getSiteFromAPI(siteID string, c chan *myml.MyML) {
 
 func getPaymentMethodsFromAPI(siteID string, c chan *myml.MyML) {
 	if siteID == "" {
-		return nil, &apierrors.ApiError{
-			Message: "siteID is empty",
-			Status:  http.StatusBadRequest,
-		}
+		c <- nil
+		return
 	}
 
-	var categories []*myml.Category
+	var payments myml.PaymentMethods
 
-	final := fmt.Sprintf(urlCategories, siteID)
-	response, err := http.Get(final)
-	if err != nil {
-		return nil, &apierrors.ApiError{
-			Message: err.Error(),
-			Status:  http.StatusInternalServerError,
-		}
+	if apiErr := payments.Get(siteID); apiErr != nil {
+		c <- nil
+		return
 	}
 
-	data, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return nil, &apierrors.ApiError{
-			Message: err.Error(),
-			Status:  http.StatusInternalServerError,
-		}
-	}
-
-	if err := json.Unmarshal([]byte(data), &categories); err != nil {
-		return nil, &apierrors.ApiError{
-			Message: err.Error(),
-			Status:  http.StatusInternalServerError,
-		}
+	c <- &myml.MyML{
+		PaymentMethods: payments,
 	}
 
 	return

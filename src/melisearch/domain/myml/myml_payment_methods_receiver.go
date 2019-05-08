@@ -9,18 +9,13 @@ import (
 	"github.com/mauryparra/melisearch/src/melisearch/utils/apierrors"
 )
 
-const urlUsers = "http://localhost:8081/users/"
+const urlPayments = "http://localhost:8081/sites/%s/payment_methods"
 
-// Get obtiene toda la iformación del usuario a partir del ID
-func (user *User) Get() *apierrors.ApiError {
-	if user.ID == 0 {
-		return &apierrors.ApiError{
-			Message: "userID is empty",
-			Status:  http.StatusBadRequest,
-		}
-	}
+// Get obtiene toda la iformación de los metodos de pago a partir del site ID
+func (payments *PaymentMethods) Get(siteID string) *apierrors.ApiError {
 
-	final := fmt.Sprintf("%s%d", urlUsers, user.ID)
+	final := fmt.Sprintf(urlPayments, siteID)
+
 	response, err := http.Get(final)
 	if err != nil {
 		return &apierrors.ApiError{
@@ -37,7 +32,7 @@ func (user *User) Get() *apierrors.ApiError {
 		}
 	}
 
-	if err := json.Unmarshal([]byte(data), &user); err != nil {
+	if err := json.Unmarshal([]byte(data), payments); err != nil {
 		return &apierrors.ApiError{
 			Message: err.Error(),
 			Status:  http.StatusInternalServerError,
